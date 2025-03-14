@@ -1,0 +1,26 @@
+# Ignore config.py
+config.py
+
+# Ignore the backup folder and everything inside it
+backup/
+
+# Ignore the Transactions folder
+2025 Transactions/
+
+# Ignore the summary backup folder
+summary backup testing (Jan data)/
+
+# Ignore the pycache folder
+__pycache__/
+
+# Ignore the 2024 data folder
+2024 Data/
+
+# Ignore the summary sheet
+Summary.xlsm
+
+# Ignore the summary updated sheet
+summary_updated.xlsm
+
+# Ignore the monthly spend sheet
+2025 Monthly Spend.xlsx
