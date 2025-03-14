@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
@@ -16,7 +17,7 @@ from config import (
     BOTH_FILL,
     BACKUP_DIRECTORY,
 )
-import shutil
+
 
 class SpreadsheetCollator:
     """Class to manage the collation of weekly spreadsheets into monthly sheets."""
@@ -77,14 +78,20 @@ class SpreadsheetCollator:
                 if applies_to_formula[0] == 'sqref':
                     new_applies_to_formula = 'A2:F300'
                     del source_ws.conditional_formatting
+                    
+                    # Create a mapping for faster lookup
+                    fill_map = {
+                        '$F2="Ruby"': RUBY_FILL,
+                        '$F2="Jack"': JACK_FILL,
+                        '$F2="Both"': BOTH_FILL
+                    }
+                    
                     for cf_rule in original_cf:
-                        original_formula = cf_rule.formula
-                        fill = (RUBY_FILL if original_formula == ['$F2="Ruby"'] else
-                               JACK_FILL if original_formula == ['$F2="Jack"'] else
-                               BOTH_FILL)
+                        original_formula = cf_rule.formula[0] if cf_rule.formula else None
+                        fill = fill_map.get(original_formula, BOTH_FILL)
                         target_ws.conditional_formatting.add(
                             new_applies_to_formula,
-                            FormulaRule(formula=original_formula, fill=fill)
+                            FormulaRule(formula=[original_formula], fill=fill)
                         )
                 else:
                     print("Error: sqref not found")
@@ -119,11 +126,12 @@ class SpreadsheetCollator:
 
     def ensure_master_workbook_exists(self):
         """Ensure the master workbook exists, creating it if necessary."""
-        if not os.path.exists(MASTER_SPREADSHEET_NAME):
+        master_path = os.path.join(SPREADSHEET_DIRECTORY, MASTER_SPREADSHEET_NAME)
+        if not os.path.exists(master_path):
             self.master_wb = Workbook()
             default_sheet = self.master_wb.active
             default_sheet.title = "Default"
-            self.master_wb.save(MASTER_SPREADSHEET_NAME)
+            self.master_wb.save(master_path)
             self._log(f"Created new master spreadsheet: {MASTER_SPREADSHEET_NAME}")
         else:
             self._log(f"Master spreadsheet found: {MASTER_SPREADSHEET_NAME}")
@@ -138,6 +146,9 @@ class SpreadsheetCollator:
             filename, extension = os.path.splitext(MASTER_SPREADSHEET_NAME)
             backup_filename = f"{filename}_{current_date}{extension}"
             backup_path = os.path.join(BACKUP_DIRECTORY, backup_filename)
+            
+            # Ensure backup directory exists
+            os.makedirs(BACKUP_DIRECTORY, exist_ok=True)
             
             # Move the file to backup directory instead of copying
             try:
@@ -155,7 +166,6 @@ class SpreadsheetCollator:
         self._log(f"Processing file: {file} -> Month: {full_month_name}")
 
         try:
-            # Update the path to use TRANSACTION_DIRECTORY instead of SPREADSHEET_DIRECTORY
             weekly_wb = load_workbook(os.path.join(TRANSACTION_DIRECTORY, file))
             weekly_ws = weekly_wb.active
         except Exception as e:
@@ -166,9 +176,12 @@ class SpreadsheetCollator:
             self.master_wb.create_sheet(title=full_month_name)
         month_ws = self.master_wb[full_month_name]
 
-        start_row = month_ws.max_row + 1 if month_ws.max_row > 1 else 1
-        if start_row > 1 and month_ws.cell(row=start_row - 1, column=1).value:
-            start_row += 1
+        # Determine start row more efficiently
+        start_row = 1
+        if month_ws.max_row > 1:
+            start_row = month_ws.max_row + 1
+            if month_ws.cell(row=start_row - 1, column=1).value:
+                start_row += 1
 
         self._log(f"Appending data to {full_month_name} starting at row {start_row}.")
         self.copy_data_with_format_and_conditional_formatting(
@@ -190,15 +203,27 @@ class SpreadsheetCollator:
             default_sheet.title = "Default"
             self._log(f"Created new master workbook after backing up the previous one")
         except Exception as e:
-            print(f"Error creating new master workbook: {e}")  # Always print exceptions
+            print(f"Error creating new master workbook: {e}")
             return
 
-        # Update to list files from TRANSACTION_DIRECTORY instead of SPREADSHEET_DIRECTORY
-        weekly_files = sorted(
-            [f for f in os.listdir(TRANSACTION_DIRECTORY) 
-             if f.endswith(".xlsx") and "Week" in f],
-            key=lambda x: int(x.split("Week")[1].split()[0])
-        )
+        # Get and filter files in one pass
+        weekly_files = []
+        try:
+            for f in os.listdir(TRANSACTION_DIRECTORY):
+                if f.endswith(".xlsx") and "Week" in f:
+                    try:
+                        week_num = int(f.split("Week")[1].split()[0])
+                        weekly_files.append((f, week_num))
+                    except (ValueError, IndexError):
+                        self._log(f"Skipping file {f}: cannot parse week number.")
+                        continue
+        except Exception as e:
+            print(f"Error accessing transaction directory: {e}")
+            return
+            
+        # Sort files by week number
+        weekly_files.sort(key=lambda x: x[1])
+        weekly_files = [f[0] for f in weekly_files]
 
         for file in weekly_files:
             try:
@@ -207,29 +232,26 @@ class SpreadsheetCollator:
                     self._log(f"Skipping file {file}: month abbreviation not found.")
                     continue
 
-                year = file.split(" ")[-1].replace(".xlsx", "")
-                if not year.isdigit() or int(year) != CURRENT_YEAR:
+                year_part = file.split(" ")[-1].replace(".xlsx", "")
+                if not year_part.isdigit() or int(year_part) != CURRENT_YEAR:
                     self._log(f"Skipping file {file}: invalid or mismatched year.")
                     continue
 
-                self._process_file(file, month_name, year)
+                self._process_file(file, month_name, year_part)
             except Exception as e:
-                print(f"Skipping file {file}: error processing ({e})")  # Always print exceptions
+                print(f"Skipping file {file}: error processing ({e})")
                 continue
 
-        # Remove Default sheet only if data was appended and Default sheet exists
-        if self.data_appended and 'Default' in self.master_wb.sheetnames:
-            # Verify there are other sheets besides Default before removing
-            if len(self.master_wb.sheetnames) > 1:
-                del self.master_wb['Default']
-                self._log("Removed unused Default sheet as data was appended.")
-            else:
-                self._log("Keeping Default sheet as it's the only sheet in the workbook.")
+        # Remove Default sheet only if data was appended and there are other sheets
+        if self.data_appended and 'Default' in self.master_wb.sheetnames and len(self.master_wb.sheetnames) > 1:
+            del self.master_wb['Default']
+            self._log("Removed unused Default sheet as data was appended.")
 
         try:
-            # Keep the output file in SPREADSHEET_DIRECTORY
-            self.master_wb.save(os.path.join(SPREADSHEET_DIRECTORY, MASTER_SPREADSHEET_NAME))
-            self._log(f"All data collated into {MASTER_SPREADSHEET_NAME}.")
+            # Save the output file to SPREADSHEET_DIRECTORY
+            output_path = os.path.join(SPREADSHEET_DIRECTORY, MASTER_SPREADSHEET_NAME)
+            self.master_wb.save(output_path)
+            self._log(f"All data collated into {output_path}.")
         except Exception as e:
             print(f"Error saving master spreadsheet: {e}")  # Always print exceptions
 
