@@ -190,7 +190,20 @@ class SpreadsheetCollator:
         self.data_appended = True
 
     def collate_monthly_spreadsheets(self):
-        """Collate all weekly spreadsheets into monthly sheets in the master workbook."""
+        """
+        Collate all weekly spreadsheets into a single master spreadsheet organized by month.
+        
+        This method:
+        1. Creates or ensures the master workbook exists
+        2. Backs up any existing master spreadsheet
+        3. Creates a new workbook if needed
+        4. Processes all weekly files in the transaction directory
+        5. Sorts files by week number
+        6. Appends data to the appropriate monthly sheets
+        
+        Returns:
+            None
+        """
         self.ensure_master_workbook_exists()
         
         # Backup existing spreadsheet before making changes
