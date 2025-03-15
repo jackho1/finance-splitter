@@ -50,7 +50,10 @@
         },
         {
           "description": "Follow PEP 8 guidelines."
-        }
+        },
+        {
+            "description": "Follow PEP 257 docstring guidelines."
+          }
       ]
     },
     
