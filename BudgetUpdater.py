@@ -7,15 +7,21 @@ import os
 from openpyxl.styles import Alignment, Font, PatternFill, NamedStyle
 from openpyxl.utils import get_column_letter
 import updateMyBuckets
-from config import TRANSACTION_DIRECTORY
+from config import (
+    TRANSACTION_DIRECTORY, 
+    SPREADSHEET_DIRECTORY, 
+    MASTER_SPREADSHEET_NAME, 
+    BACKUP_DIRECTORY,
+    SUMMARY_FILE
+)
 
 class BudgetUpdater:
     """ Updates the "Budget", "Total Balance", and "Jacks Buckets" sheets with recent transactions"""
     
-    def __init__(self, file_path, workbook_name, one_drive_path=None, verbose=True):
+    def __init__(self, file_path=None, workbook_name=None, one_drive_path=None, verbose=True):
         # Initialize basic parameters
-        self.file_path = file_path
-        self.workbook_name = workbook_name
+        self.file_path = file_path or os.path.join(SPREADSHEET_DIRECTORY, SUMMARY_FILE)
+        self.workbook_name = workbook_name or MASTER_SPREADSHEET_NAME
         self.one_drive_path = one_drive_path
         self.verbose = verbose
         
@@ -29,7 +35,7 @@ class BudgetUpdater:
         self.current_year = self.current_date.year
         
         # Load workbook
-        self.wb = load_workbook(file_path, keep_vba=True, data_only=False)
+        self.wb = load_workbook(self.file_path, keep_vba=True, data_only=False)
 
     def _log(self, message, is_error=False):
         """Prints messages if verbose is True or if it's an error."""
@@ -360,9 +366,24 @@ class BudgetUpdater:
         else:
             self._log("ℹ No new transactions found since last update", is_error=True)
 
-    def save_workbook(self, output_path):
+    def save_workbook(self, output_path=None):
         """Saves the modified workbook."""
         try:
+            # If output_path is not specified, use the original file path
+            if output_path is None:
+                output_path = self.file_path
+            
+            # Create backup before saving
+            if os.path.exists(self.file_path):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_filename = f"{os.path.splitext(os.path.basename(SUMMARY_FILE))[0]}_backup_{timestamp}.xlsm"
+                backup_path = os.path.join(BACKUP_DIRECTORY, backup_filename)
+                
+                # Copy original file to backup
+                import shutil
+                shutil.copy2(self.file_path, backup_path)
+                self._log(f"📁 Created backup at {backup_path}")
+            
             self.wb.save(output_path)
             self._log(f"\n✅ Saved to {output_path}")
         except Exception as e:
@@ -377,11 +398,10 @@ class BudgetUpdater:
 if __name__ == "__main__":
     try:
         updater = BudgetUpdater(
-            file_path='summary_updated.xlsm',
-            workbook_name="2025 Monthly Spend.xlsx",
+            # Use config values instead of hardcoded paths
             verbose=False  # Set to True for detailed logs
         )
         updater.run_all_updates()
-        updater.save_workbook('summary_updated.xlsm')
+        updater.save_workbook()
     except Exception as e:
         print(f"❌ An error occurred: {str(e)}")

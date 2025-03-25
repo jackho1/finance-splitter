@@ -24,6 +24,9 @@ BOTH_FILL = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="sol
 # UPDATE THIS
 SPREADSHEET_DIRECTORY = "your/path/here"
 
+# File names
+SUMMARY_FILE = "summary_updated.xlsm"  # Master file with VBA and summary sheets
+
 # File path for collating spreadsheets together on a monthly basis. TODO: Fix naming
 # Configuration
 CURRENT_YEAR = datetime.now().year  # Automatically fetch the current year
