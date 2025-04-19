@@ -55,3 +55,15 @@ MASTER_SPREADSHEET_NAME = f"{CURRENT_YEAR} Monthly Spend.xlsx"  # Dynamic name b
 # Other IDs (if needed in the future)
 #INSTITUTION_ID = 'YOUR_INSTITUTION_ID'
 
+# Database configuration
+DB_CONFIG = {
+    'dbname': 'transactions',
+    'user': 'postgres',
+    'password': 'password',
+    'host': 'localhost',
+    'port': '5432'
+}
+
+# Transaction fetching configuration
+DAYS_TO_FETCH = 30  # Number of days to fetch transactions for
+

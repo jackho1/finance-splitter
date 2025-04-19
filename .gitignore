@@ -27,3 +27,6 @@ summary_updated.xlsm
 
 # Ignore cursor rules
 .cursorrules
+
+# Ignore the .cursorignore file
+.cursorignore

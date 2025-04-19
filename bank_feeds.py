@@ -436,7 +436,6 @@ def main(start_date=None):
     save_to_excel(categorized_transactions)
     save_last_run_date()  # Save the current date as last run date
 
-
 # Run the main function with a specified start_date for testing
 if __name__ == "__main__":
     main()
