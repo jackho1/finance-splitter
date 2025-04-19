@@ -112,14 +112,24 @@ def fetch_transactions(start_date=None):
 # Function to auto-label bank categories
 # TODO: Fix this so it is not hardcoded and is dependent on the PEOPLE labels. For now, it is currently hardcoded.
 def auto_label_bank_category(bank_category):
-    # Return specific labels based on bank category
-    if not bank_category or bank_category in ["Dining", "Travel"]:
+    """
+    Automatically label transactions based on bank category.
+    
+    Returns the appropriate person label from PEOPLE list or None for shared/unlabeled categories.
+    """
+    # Categories that should have no specific person assigned
+    no_label_categories = ["Dining", "Travel"]
+    
+    # Categories that should be assigned to the first person
+    first_person_categories = ["Personal Items", "Personal Care", "Hobbies", 
+                              "Entertainment/Recreation", "Vehicle", "Gym", "Fuel"]
+    
+    if not bank_category or bank_category in no_label_categories:
         return None  # No label for these categories
-    elif bank_category in ["Recreation", "Professional Services"]:
-        return "Jack"  # Return "Jack" for these categories
+    elif bank_category in first_person_categories:
+        return PEOPLE[0]  # Return first person from PEOPLE list
     else:
         return "Both"  # Default label for all other categories
-
 
 # Function to categorize and label transactions
 def categorize_and_label_transactions(transactions):
@@ -425,7 +435,6 @@ def main(start_date=None):
     
     save_to_excel(categorized_transactions)
     save_last_run_date()  # Save the current date as last run date
-
 
 # Run the main function with a specified start_date for testing
 if __name__ == "__main__":

@@ -24,3 +24,9 @@ summary_updated.xlsm
 
 # Ignore the monthly spend sheet
 2025 Monthly Spend.xlsx
+
+# Ignore cursor rules
+.cursorrules
+
+# Ignore the .cursorignore file
+.cursorignore

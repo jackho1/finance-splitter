@@ -24,6 +24,9 @@ BOTH_FILL = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="sol
 # UPDATE THIS
 SPREADSHEET_DIRECTORY = "your/path/here"
 
+# File names
+SUMMARY_FILE = "summary_updated.xlsm"  # Master file with VBA and summary sheets
+
 # File path for collating spreadsheets together on a monthly basis. TODO: Fix naming
 # Configuration
 CURRENT_YEAR = datetime.now().year  # Automatically fetch the current year
@@ -51,4 +54,16 @@ MASTER_SPREADSHEET_NAME = f"{CURRENT_YEAR} Monthly Spend.xlsx"  # Dynamic name b
 
 # Other IDs (if needed in the future)
 #INSTITUTION_ID = 'YOUR_INSTITUTION_ID'
+
+# Database configuration
+DB_CONFIG = {
+    'dbname': 'transactions',
+    'user': 'postgres',
+    'password': 'password',
+    'host': 'localhost',
+    'port': '5432'
+}
+
+# Transaction fetching configuration
+DAYS_TO_FETCH = 30  # Number of days to fetch transactions for
 
